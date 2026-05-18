@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, DoorClosed, CreditCard, Banknote, BarChart2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DataSourceBanner } from "@/components/data-source-banner";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -53,6 +54,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
         </header>
         <div className="flex-1 p-6 md:p-8 overflow-y-auto">
+          <DataSourceBanner />
           {children}
         </div>
       </main>
