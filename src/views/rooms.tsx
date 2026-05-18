@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RoomImageField } from "@/components/room-image-field";
 import { RoomThumbnail } from "@/components/room-thumbnail";
+import { RoomOccupantsCell } from "@/components/room-occupants-cell";
 import { resolveRoomImageUrl } from "@/lib/room-image";
 import { toast } from "sonner";
 
@@ -152,7 +153,8 @@ function RoomForm({
 }
 
 export default function Rooms() {
-  const { rooms, isLoading, dataSourceMode, addRoom, updateRoom, deleteRoom } = useAppStore();
+  const { rooms, students, assignments, isLoading, dataSourceMode, addRoom, updateRoom, deleteRoom } =
+    useAppStore();
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
@@ -233,6 +235,7 @@ export default function Rooms() {
               <TableHead>Floor</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[200px]">Occupancy</TableHead>
+              <TableHead className="min-w-[9rem]">Occupants</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -255,6 +258,9 @@ export default function Rooms() {
                   <TableCell>
                     <Skeleton className="h-2 w-full mt-2" />
                   </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Skeleton className="h-8 w-16 ml-auto" />
                   </TableCell>
@@ -262,7 +268,7 @@ export default function Rooms() {
               ))
             ) : filteredRooms.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
+                <TableCell colSpan={7} className="h-32 text-center">
                   <EmptyState title="No rooms found" description="Try adjusting your search or add a new room." />
                 </TableCell>
               </TableRow>
@@ -289,6 +295,14 @@ export default function Rooms() {
                           {room.currentOccupancy}/{room.capacity}
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <RoomOccupantsCell
+                        roomId={room.id}
+                        roomNumber={room.roomNumber}
+                        assignments={assignments}
+                        students={students}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
