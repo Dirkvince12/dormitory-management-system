@@ -21,6 +21,7 @@ export function mapRoomRow(row: Tables<"rooms">): Room {
     capacity: row.capacity,
     currentOccupancy: row.current_occupancy,
     status: row.status,
+    imageUrl: row.image_url,
   };
 }
 
@@ -64,6 +65,7 @@ export function roomToInsert(room: Omit<Room, "id" | "currentOccupancy" | "statu
     capacity: room.capacity,
     current_occupancy: 0,
     status: "available" as const,
+    image_url: room.imageUrl,
   };
 }
 

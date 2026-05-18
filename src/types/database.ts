@@ -64,6 +64,7 @@ export type Database = {
           capacity: number;
           current_occupancy: number;
           status: RoomStatus;
+          image_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -74,6 +75,7 @@ export type Database = {
           capacity: number;
           current_occupancy?: number;
           status?: RoomStatus;
+          image_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -84,6 +86,7 @@ export type Database = {
           capacity?: number;
           current_occupancy?: number;
           status?: RoomStatus;
+          image_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };

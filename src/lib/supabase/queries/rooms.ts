@@ -42,6 +42,7 @@ export async function updateRoom(
       ...(updates.capacity !== undefined && { capacity: updates.capacity }),
       ...(updates.currentOccupancy !== undefined && { current_occupancy: updates.currentOccupancy }),
       ...(updates.status !== undefined && { status: updates.status }),
+      ...(updates.imageUrl !== undefined && { image_url: updates.imageUrl }),
     })
     .eq("id", id)
     .select()

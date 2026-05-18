@@ -27,6 +27,8 @@ import {
   updateStudent,
 } from "@/lib/supabase/queries/students";
 import { syncRoomOccupancy } from "@/lib/supabase/sync-rooms";
+import { uploadRoomImage } from "@/lib/supabase/storage/room-images";
+import { validateRoomImageFile } from "@/lib/room-image";
 import type { Assignment, Payment, Room, Student } from "@/types/entities";
 
 export type DormData = {
@@ -83,6 +85,19 @@ export async function deleteStudentAction(id: number): Promise<DormData> {
   await deleteStudent(supabase, id);
   await syncRoomOccupancy(supabase);
   return (await loadDormData())!;
+}
+
+export async function uploadRoomImageAction(formData: FormData): Promise<string> {
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    throw new Error("No image file provided.");
+  }
+
+  const validationError = validateRoomImageFile(file);
+  if (validationError) throw new Error(validationError);
+
+  const supabase = getClient();
+  return uploadRoomImage(supabase, file);
 }
 
 export async function addRoomAction(

@@ -10,14 +10,14 @@ const daysFrom = (base: string, offset: number) => {
 const BASE = "2026-05-18";
 
 export const seedRooms: Room[] = [
-  { id: 1, roomNumber: "101", floor: 1, capacity: 2, currentOccupancy: 2, status: "full" },
-  { id: 2, roomNumber: "102", floor: 1, capacity: 3, currentOccupancy: 1, status: "partial" },
-  { id: 3, roomNumber: "103", floor: 1, capacity: 2, currentOccupancy: 1, status: "partial" },
-  { id: 4, roomNumber: "201", floor: 2, capacity: 4, currentOccupancy: 2, status: "partial" },
-  { id: 5, roomNumber: "202", floor: 2, capacity: 2, currentOccupancy: 1, status: "partial" },
-  { id: 6, roomNumber: "203", floor: 2, capacity: 2, currentOccupancy: 0, status: "available" },
-  { id: 7, roomNumber: "301", floor: 3, capacity: 6, currentOccupancy: 0, status: "available" },
-  { id: 8, roomNumber: "302", floor: 3, capacity: 2, currentOccupancy: 0, status: "available" },
+  { id: 1, roomNumber: "101", floor: 1, capacity: 2, currentOccupancy: 2, status: "full", imageUrl: null },
+  { id: 2, roomNumber: "102", floor: 1, capacity: 3, currentOccupancy: 1, status: "partial", imageUrl: null },
+  { id: 3, roomNumber: "103", floor: 1, capacity: 2, currentOccupancy: 1, status: "partial", imageUrl: null },
+  { id: 4, roomNumber: "201", floor: 2, capacity: 4, currentOccupancy: 2, status: "partial", imageUrl: null },
+  { id: 5, roomNumber: "202", floor: 2, capacity: 2, currentOccupancy: 1, status: "partial", imageUrl: null },
+  { id: 6, roomNumber: "203", floor: 2, capacity: 2, currentOccupancy: 0, status: "available", imageUrl: null },
+  { id: 7, roomNumber: "301", floor: 3, capacity: 6, currentOccupancy: 0, status: "available", imageUrl: null },
+  { id: 8, roomNumber: "302", floor: 3, capacity: 2, currentOccupancy: 0, status: "available", imageUrl: null },
 ];
 
 export const seedStudents: Student[] = [

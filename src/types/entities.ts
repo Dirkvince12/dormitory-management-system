@@ -18,6 +18,7 @@ export type Room = {
   capacity: number;
   currentOccupancy: number;
   status: RoomStatus;
+  imageUrl: string | null;
 };
 
 export type Assignment = {

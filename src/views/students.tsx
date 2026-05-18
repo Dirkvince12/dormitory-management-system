@@ -1,20 +1,99 @@
 "use client";
 
 import { useState } from "react";
-import { useAppStore, Student } from "@/lib/store";
+import { useAppStore, type Room, type Student } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, UserMinus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
+function RoomAssignmentCell({
+  student,
+  rooms,
+  assignmentId,
+  onAssign,
+  onUnassign,
+}: {
+  student: Student;
+  rooms: Room[];
+  assignmentId: number | undefined;
+  onAssign: (roomId: number) => void;
+  onUnassign: () => void;
+}) {
+  const assignedRoom = student.assignedRoomId
+    ? rooms.find((r) => r.id === student.assignedRoomId)
+    : null;
+  const availableRooms = rooms.filter(
+    (r) => r.id === student.assignedRoomId || r.status !== "full",
+  );
+  const selectValue = student.assignedRoomId ? student.assignedRoomId.toString() : undefined;
+
+  if (availableRooms.length === 0 && !assignedRoom) {
+    return (
+      <Badge variant="outline" className="text-muted-foreground font-normal">
+        No rooms available
+      </Badge>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+      <Select
+        value={selectValue}
+        onValueChange={(value) => {
+          if (value) onAssign(Number(value));
+        }}
+      >
+        <SelectTrigger className="h-8 w-[min(100%,11rem)] text-xs" data-testid={`assign-room-${student.id}`}>
+          <SelectValue
+            placeholder={assignedRoom ? `Room ${assignedRoom.roomNumber}` : "Assign room…"}
+          />
+        </SelectTrigger>
+        <SelectContent>
+          {availableRooms.map((room) => (
+            <SelectItem key={room.id} value={room.id.toString()}>
+              Room {room.roomNumber} ({room.capacity - room.currentOccupancy} bed
+              {room.capacity - room.currentOccupancy === 1 ? "" : "s"} free)
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {assignmentId !== undefined && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2 text-muted-foreground hover:text-destructive"
+          onClick={onUnassign}
+          data-testid={`unassign-room-${student.id}`}
+        >
+          <UserMinus className="h-3.5 w-3.5" />
+          <span className="sr-only">Unassign from room</span>
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function Students() {
-  const { students, rooms, isLoading, addStudent, updateStudent, deleteStudent } = useAppStore();
+  const {
+    students,
+    rooms,
+    assignments,
+    isLoading,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    assignStudentToRoom,
+    removeAssignment,
+  } = useAppStore();
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -137,24 +216,24 @@ export default function Students() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredStudents.map(student => {
-                const assignedRoom = student.assignedRoomId ? rooms.find(r => r.id === student.assignedRoomId) : null;
-                
+              filteredStudents.map((student) => {
+                const assignment = assignments.find((a) => a.studentId === student.id);
+
                 return (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.studentId}</TableCell>
                     <TableCell>{student.name}</TableCell>
                     <TableCell className="text-muted-foreground">{student.course}</TableCell>
                     <TableCell>
-                      {assignedRoom ? (
-                        <Badge variant="secondary" className="font-normal">
-                          Room {assignedRoom.roomNumber}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground font-normal">
-                          Unassigned
-                        </Badge>
-                      )}
+                      <RoomAssignmentCell
+                        student={student}
+                        rooms={rooms}
+                        assignmentId={assignment?.id}
+                        onAssign={(roomId) => assignStudentToRoom(student.id, roomId)}
+                        onUnassign={() => {
+                          if (assignment) removeAssignment(assignment.id);
+                        }}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

@@ -14,6 +14,7 @@ create table public.rooms (
   capacity integer not null check (capacity > 0),
   current_occupancy integer not null default 0 check (current_occupancy >= 0),
   status public.room_status not null default 'available',
+  image_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint rooms_room_number_unique unique (room_number)
