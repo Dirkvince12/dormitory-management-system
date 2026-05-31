@@ -71,6 +71,7 @@ export default function Reports() {
     .map(s => ({
       name: s.name,
       studentId: s.studentId,
+      email: s.email,
       paid: payments.filter(p => p.studentId === s.id && p.status === "paid").reduce((sum, p) => sum + p.amount, 0),
       pending: payments.filter(p => p.studentId === s.id && p.status !== "paid").reduce((sum, p) => sum + p.amount, 0),
     }))
@@ -245,7 +246,7 @@ export default function Reports() {
                     </div>
                     <div>
                       <p className="text-sm font-medium leading-none">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">{s.studentId}</p>
+                      <p className="text-xs text-muted-foreground">{s.studentId} · {s.email}</p>
                     </div>
                   </div>
                   <div className="text-right">

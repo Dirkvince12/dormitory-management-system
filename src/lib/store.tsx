@@ -33,6 +33,12 @@ import {
   seedRooms,
   seedStudents,
 } from "@/lib/seed-data";
+import { syncRoomsWithAssignments } from "@/lib/rooms";
+import { formatSupabaseError } from "@/lib/supabase/errors";
+import {
+  addPaidPaymentToState,
+  recordPaymentAndRollForward,
+} from "@/lib/recurring-payments";
 export type { Assignment, Payment, PaymentStatus, Room, Student };
 
 type AppState = {
@@ -79,8 +85,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const applyData = useCallback((data: DormData) => {
     setStudents(data.students);
-    setRooms(data.rooms);
     setAssignments(data.assignments);
+    setRooms(syncRoomsWithAssignments(data.assignments, data.rooms));
     setPayments(data.payments);
   }, []);
 
@@ -102,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (mode === "misconfigured") {
           applyData(localSeed);
           toast.warning(
-            "Supabase is partially configured. Add SUPABASE_SERVICE_ROLE_KEY to .env.local and Vercel, then redeploy.",
+            "Supabase is partially configured. Add SUPABASE_SERVICE_ROLE_KEY to .env and Vercel, then redeploy.",
             { duration: 8000 },
           );
           return;
@@ -112,7 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!cancelled && data) applyData(data);
       } catch {
         if (!cancelled) {
-          toast.error("Could not load data from Supabase. Check .env.local and run the schema migration.");
+          toast.error("Could not load data from Supabase. Check .env and run the schema migration.");
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -142,23 +148,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         applyData(data);
         toast.success(successMessage);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Something went wrong";
-        toast.error(message);
+        toast.error(formatSupabaseError(err));
         throw err;
       }
     },
     [applyData, useDatabase],
   );
 
-  const recalculateRoomOccupancy = (currentAssignments: Assignment[], currentRooms: Room[]) => {
-    return currentRooms.map((room) => {
-      const occupancy = currentAssignments.filter((a) => a.roomId === room.id).length;
-      let status: Room["status"] = "available";
-      if (occupancy >= room.capacity) status = "full";
-      else if (occupancy > 0) status = "partial";
-      return { ...room, currentOccupancy: occupancy, status };
-    });
-  };
+  const recalculateRoomOccupancy = (currentAssignments: Assignment[], currentRooms: Room[]) =>
+    syncRoomsWithAssignments(currentAssignments, currentRooms);
 
   const addStudent = async (student: Omit<Student, "id" | "assignedRoomId">) => {
     await runWithDb(
@@ -311,7 +309,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addPayment = async (payment: Omit<Payment, "id">) => {
     await runWithDb(
       () => {
-        setPayments((prev) => [...prev, { ...payment, id: Date.now() }]);
+        setPayments((prev) => {
+          if (payment.status !== "paid") {
+            return [...prev, { ...payment, id: Date.now() }];
+          }
+          return addPaidPaymentToState(prev, payment);
+        });
       },
       () => addPaymentAction(payment),
       "Payment record added",
@@ -341,16 +344,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const markPaymentPaid = async (id: number) => {
     await runWithDb(
       () => {
-        setPayments((prev) =>
-          prev.map((p) =>
-            p.id === id
-              ? { ...p, status: "paid", paidDate: new Date().toISOString().split("T")[0] }
-              : p,
-          ),
-        );
+        setPayments((prev) => recordPaymentAndRollForward(prev, id));
       },
       () => markPaymentPaidAction(id),
-      "Payment marked as paid",
+      "Payment recorded — saved to history, bill advanced to next month",
     );
   };
 

@@ -34,7 +34,7 @@ export function resolveDataSourceMode(): DataSourceMode {
 export function getSupabasePublicEnv() {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      "Missing Supabase env vars. Copy .env.local.example to .env.local and set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+      "Missing Supabase env vars. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.",
     );
   }
 
@@ -47,7 +47,7 @@ export function getSupabasePublicEnv() {
 export function getSupabaseServiceRoleKey() {
   if (!supabaseServiceRoleKey) {
     throw new Error(
-      "Missing SUPABASE_SERVICE_ROLE_KEY. Add it to .env.local (server-only, never use in client code).",
+      "Missing SUPABASE_SERVICE_ROLE_KEY. Add it to .env (server-only, never use in client code).",
     );
   }
 

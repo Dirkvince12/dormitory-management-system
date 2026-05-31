@@ -30,6 +30,11 @@ import { syncRoomOccupancy } from "@/lib/supabase/sync-rooms";
 import { uploadRoomImage } from "@/lib/supabase/storage/room-images";
 import { validateRoomImageFile } from "@/lib/room-image";
 import type { Assignment, Payment, Room, Student } from "@/types/entities";
+import {
+  advancePaymentToNextMonth,
+  buildActiveBillFromPayment,
+  buildPaymentHistoryRecord,
+} from "@/lib/recurring-payments";
 
 export type DormData = {
   students: Student[];
@@ -44,7 +49,7 @@ export async function getDataSourceMode(): Promise<DataSourceMode> {
 
 function getClient() {
   if (!isSupabaseServerReady()) {
-    throw new Error("Supabase is not fully configured. Add all keys to .env.local.");
+    throw new Error("Supabase is not fully configured. Add all keys to .env.");
   }
   return createAdminClient();
 }
@@ -170,7 +175,15 @@ export async function removeAssignmentAction(assignmentId: number): Promise<Dorm
 
 export async function addPaymentAction(payment: Omit<Payment, "id">): Promise<DormData> {
   const supabase = getClient();
-  await insertPayment(supabase, payment);
+
+  if (payment.status === "paid") {
+    const snapshot = { ...payment, id: 0 } as Payment;
+    await insertPayment(supabase, buildPaymentHistoryRecord(snapshot));
+    await insertPayment(supabase, buildActiveBillFromPayment(snapshot));
+  } else {
+    await insertPayment(supabase, payment);
+  }
+
   return (await loadDormData())!;
 }
 
@@ -191,9 +204,12 @@ export async function deletePaymentAction(id: number): Promise<DormData> {
 
 export async function markPaymentPaidAction(id: number): Promise<DormData> {
   const supabase = getClient();
-  await updatePayment(supabase, id, {
-    status: "paid",
-    paidDate: new Date().toISOString().split("T")[0],
-  });
+  const payments = await fetchPayments(supabase);
+  const payment = payments.find((p) => p.id === id);
+  if (!payment) throw new Error("Payment not found");
+
+  await insertPayment(supabase, buildPaymentHistoryRecord(payment));
+  await updatePayment(supabase, id, advancePaymentToNextMonth(payment));
+
   return (await loadDormData())!;
 }

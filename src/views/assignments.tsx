@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { getAvailableBeds, getRoomsAvailableForAssignment } from "@/lib/rooms";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, UserMinus } from "lucide-react";
@@ -29,7 +30,7 @@ export default function Assignments() {
   };
 
   const unassignedStudents = students.filter(s => s.assignedRoomId === null);
-  const availableRooms = rooms.filter(r => r.status !== "full");
+  const availableRooms = getRoomsAvailableForAssignment(rooms, assignments);
 
   return (
     <div className="space-y-6">
@@ -61,7 +62,7 @@ export default function Assignments() {
                     )}
                     {unassignedStudents.map(student => (
                       <SelectItem key={student.id} value={student.id.toString()}>
-                        {student.name} ({student.studentId})
+                        {student.name} ({student.studentId} · {student.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -77,11 +78,14 @@ export default function Assignments() {
                     {availableRooms.length === 0 && (
                       <SelectItem value="none" disabled>No available rooms</SelectItem>
                     )}
-                    {availableRooms.map(room => (
-                      <SelectItem key={room.id} value={room.id.toString()}>
-                        Room {room.roomNumber} ({room.capacity - room.currentOccupancy} beds free)
-                      </SelectItem>
-                    ))}
+                    {availableRooms.map(room => {
+                      const bedsFree = getAvailableBeds(room, assignments);
+                      return (
+                        <SelectItem key={room.id} value={room.id.toString()}>
+                          Room {room.roomNumber} ({bedsFree} bed{bedsFree === 1 ? "" : "s"} free)
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -132,6 +136,7 @@ export default function Assignments() {
                     <TableCell>
                       <div className="font-medium">{student.name}</div>
                       <div className="text-xs text-muted-foreground">{student.studentId}</div>
+                      <div className="text-xs text-muted-foreground">{student.email}</div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium font-mono">{room.roomNumber}</div>

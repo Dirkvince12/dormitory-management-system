@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Assignment } from "@/types/entities";
+import { throwSupabaseError } from "@/lib/supabase/errors";
 import { mapAssignmentRow } from "@/lib/supabase/mappers";
 
 type Client = SupabaseClient<Database>;
@@ -11,7 +12,7 @@ export async function fetchAssignments(supabase: Client): Promise<Assignment[]> 
     .select("*")
     .order("assigned_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
   return (data ?? []).map(mapAssignmentRow);
 }
 
@@ -29,7 +30,7 @@ export async function insertAssignment(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
   return mapAssignmentRow(data);
 }
 
@@ -48,11 +49,11 @@ export async function updateAssignment(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
   return mapAssignmentRow(data);
 }
 
 export async function deleteAssignment(supabase: Client, id: number): Promise<void> {
   const { error } = await supabase.from("assignments").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
 }

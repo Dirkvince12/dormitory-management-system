@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, DoorClosed, CreditCard, Banknote, BarChart2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DataSourceBanner } from "@/components/data-source-banner";
+import { AuthActions } from "@/components/auth-actions";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -14,7 +15,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/students", label: "Students", icon: Users },
     { href: "/rooms", label: "Rooms", icon: DoorClosed },
     { href: "/billing", label: "Billing", icon: CreditCard },
-    { href: "/payments", label: "Payment", icon: Banknote },
+    { href: "/payments", label: "Payment History", icon: Banknote },
     { href: "/reports", label: "Reports", icon: BarChart2 },
   ];
 
@@ -51,7 +52,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               Dormitory Management System
             </span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2 shrink-0">
+            <AuthActions />
+            <ThemeToggle />
+          </div>
         </header>
         <div className="flex-1 p-6 md:p-8 overflow-y-auto">
           <DataSourceBanner />

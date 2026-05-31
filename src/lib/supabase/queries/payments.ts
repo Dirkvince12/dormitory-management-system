@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Payment } from "@/types/entities";
+import { throwSupabaseError } from "@/lib/supabase/errors";
 import { mapPaymentRow, paymentToInsert } from "@/lib/supabase/mappers";
 
 type Client = SupabaseClient<Database>;
@@ -11,7 +12,7 @@ export async function fetchPayments(supabase: Client): Promise<Payment[]> {
     .select("*")
     .order("due_date", { ascending: false });
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
   return (data ?? []).map(mapPaymentRow);
 }
 
@@ -25,7 +26,7 @@ export async function insertPayment(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
   return mapPaymentRow(data);
 }
 
@@ -49,11 +50,11 @@ export async function updatePayment(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
   return mapPaymentRow(data);
 }
 
 export async function deletePayment(supabase: Client, id: number): Promise<void> {
   const { error } = await supabase.from("payments").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throwSupabaseError(error);
 }

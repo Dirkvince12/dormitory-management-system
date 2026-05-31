@@ -87,7 +87,7 @@ export function RoomOccupantsCell({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{student.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {student.studentId} · {student.course}
+                    {student.studentId} · {student.email}
                   </span>
                 </span>
               </Link>

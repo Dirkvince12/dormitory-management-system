@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAppStore, type Room, type Student } from "@/lib/store";
+import { useAppStore, type Assignment, type Room, type Student } from "@/lib/store";
+import { getAvailableBeds, getRoomsForStudentAssignment } from "@/lib/rooms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,33 +10,57 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Pencil, Trash2, UserMinus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { GENDER_OPTIONS, getGenderLabel, type Gender } from "@/lib/gender";
+import { toast } from "sonner";
+
+function splitFullName(fullName: string): { firstName: string; lastName: string } {
+  const trimmed = fullName.trim();
+  const space = trimmed.indexOf(" ");
+  if (space === -1) return { firstName: trimmed, lastName: "" };
+  return { firstName: trimmed.slice(0, space), lastName: trimmed.slice(space + 1).trim() };
+}
 
 function RoomAssignmentCell({
   student,
   rooms,
-  assignmentId,
+  assignments,
+  assignment,
   onAssign,
   onUnassign,
 }: {
   student: Student;
   rooms: Room[];
-  assignmentId: number | undefined;
+  assignments: Assignment[];
+  assignment: Assignment | undefined;
   onAssign: (roomId: number) => void;
   onUnassign: () => void;
 }) {
-  const assignedRoom = student.assignedRoomId
-    ? rooms.find((r) => r.id === student.assignedRoomId)
+  const assignedRoomId = student.assignedRoomId ?? assignment?.roomId ?? null;
+  const assignedRoom = assignedRoomId
+    ? rooms.find((r) => r.id === assignedRoomId)
     : null;
-  const availableRooms = rooms.filter(
-    (r) => r.id === student.assignedRoomId || r.status !== "full",
+  const selectableRooms = getRoomsForStudentAssignment(
+    rooms,
+    assignments,
+    assignedRoomId,
   );
-  const selectValue = student.assignedRoomId ? student.assignedRoomId.toString() : undefined;
+  const selectValue = assignedRoomId?.toString();
 
-  if (availableRooms.length === 0 && !assignedRoom) {
+  if (selectableRooms.length === 0 && !assignedRoom) {
     return (
       <Badge variant="outline" className="text-muted-foreground font-normal">
         No rooms available
@@ -57,15 +82,21 @@ function RoomAssignmentCell({
           />
         </SelectTrigger>
         <SelectContent>
-          {availableRooms.map((room) => (
-            <SelectItem key={room.id} value={room.id.toString()}>
-              Room {room.roomNumber} ({room.capacity - room.currentOccupancy} bed
-              {room.capacity - room.currentOccupancy === 1 ? "" : "s"} free)
-            </SelectItem>
-          ))}
+          {selectableRooms.map((room) => {
+            const bedsFree = getAvailableBeds(room, assignments);
+            const isCurrentRoom = room.id === assignedRoomId;
+            return (
+              <SelectItem key={room.id} value={room.id.toString()}>
+                Room {room.roomNumber}
+                {isCurrentRoom && bedsFree === 0
+                  ? " (assigned)"
+                  : ` (${bedsFree} bed${bedsFree === 1 ? "" : "s"} free)`}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
-      {assignmentId !== undefined && (
+      {assignment !== undefined && (
         <Button
           type="button"
           variant="ghost"
@@ -79,6 +110,176 @@ function RoomAssignmentCell({
         </Button>
       )}
     </div>
+  );
+}
+
+function StudentForm({
+  student,
+  onSubmit,
+  onCancel,
+}: {
+  student?: Student;
+  onSubmit: (data: Omit<Student, "id" | "assignedRoomId">) => void;
+  onCancel: () => void;
+}) {
+  const { firstName: defaultFirstName, lastName: defaultLastName } = student?.name
+    ? splitFullName(student.name)
+    : { firstName: "", lastName: "" };
+  const [gender, setGender] = useState<Gender | "">(student?.gender ?? "");
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!gender) {
+      toast.error("Select a gender (Male or Female).");
+      return;
+    }
+    const formData = new FormData(e.currentTarget);
+    const firstName = String(formData.get("firstName") ?? "").trim();
+    const lastName = String(formData.get("lastName") ?? "").trim();
+    const name = [firstName, lastName].filter(Boolean).join(" ");
+    onSubmit({
+      name,
+      studentId: String(formData.get("studentId")),
+      course: String(formData.get("course")),
+      department: String(formData.get("department")),
+      contactNumber: String(formData.get("contactNumber")),
+      email: String(formData.get("email")).trim(),
+      gender,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-0">
+      <div className="space-y-5 py-1">
+        <div className="space-y-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Personal information
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First name</Label>
+              <Input
+                id="firstName"
+                name="firstName"
+                placeholder="e.g. Juan"
+                defaultValue={defaultFirstName}
+                className="h-10"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                placeholder="e.g. Dela Cruz"
+                defaultValue={defaultLastName}
+                className="h-10"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="studentId">Student ID</Label>
+            <Input
+              id="studentId"
+              name="studentId"
+              placeholder="e.g. STU001"
+              defaultValue={student?.studentId}
+              className="h-10"
+              required
+            />
+          </div>
+          <div className="space-y-3">
+            <Label>Gender</Label>
+            <RadioGroup
+              value={gender}
+              onValueChange={(v) => setGender(v as Gender)}
+              className="grid grid-cols-2 gap-2"
+            >
+              {GENDER_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  htmlFor={`student-gender-${option.value}`}
+                  className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
+                >
+                  <RadioGroupItem
+                    id={`student-gender-${option.value}`}
+                    value={option.value}
+                    data-testid={`radio-student-gender-${option.value}`}
+                  />
+                  <span className="text-sm font-medium">{option.label}</span>
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Academic & contact
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="course">Course</Label>
+              <Input
+                id="course"
+                name="course"
+                placeholder="e.g. Computer Science"
+                defaultValue={student?.course}
+                className="h-10"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                name="department"
+                placeholder="e.g. Engineering"
+                defaultValue={student?.department}
+                className="h-10"
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="e.g. juan.delacruz@university.edu"
+              defaultValue={student?.email}
+              className="h-10"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contactNumber">Contact number</Label>
+            <Input
+              id="contactNumber"
+              name="contactNumber"
+              type="tel"
+              placeholder="e.g. 0917 123 4567"
+              defaultValue={student?.contactNumber}
+              className="h-10"
+              required
+            />
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter className="-mx-6 -mb-6 mt-5 gap-2 border-t bg-muted/30 px-6 py-4 sm:justify-end">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" className="min-w-[5.5rem]">
+          {student ? "Save changes" : "Add student"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
 
@@ -100,50 +301,19 @@ export default function Students() {
 
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.studentId.toLowerCase().includes(search.toLowerCase())
+    s.studentId.toLowerCase().includes(search.toLowerCase()) ||
+    s.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const StudentForm = ({ student, onSubmit, onCancel }: { student?: Student, onSubmit: (data: any) => void, onCancel: () => void }) => {
-    return (
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        onSubmit({
-          name: formData.get('name'),
-          studentId: formData.get('studentId'),
-          course: formData.get('course'),
-          department: formData.get('department'),
-          contactNumber: formData.get('contactNumber'),
-        });
-      }}>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">Name</Label>
-            <Input id="name" name="name" defaultValue={student?.name} className="col-span-3" required />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="studentId" className="text-right">Student ID</Label>
-            <Input id="studentId" name="studentId" defaultValue={student?.studentId} className="col-span-3" required />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="course" className="text-right">Course</Label>
-            <Input id="course" name="course" defaultValue={student?.course} className="col-span-3" required />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="department" className="text-right">Department</Label>
-            <Input id="department" name="department" defaultValue={student?.department} className="col-span-3" required />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="contactNumber" className="text-right">Contact</Label>
-            <Input id="contactNumber" name="contactNumber" defaultValue={student?.contactNumber} className="col-span-3" required />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit">Save</Button>
-        </DialogFooter>
-      </form>
-    );
+  const getGenderColor = (gender: Student["gender"]) => {
+    switch (gender) {
+      case "male":
+        return "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400";
+      case "female":
+        return "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400";
+      default:
+        return "text-muted-foreground";
+    }
   };
 
   return (
@@ -159,17 +329,22 @@ export default function Students() {
               <Plus className="w-4 h-4 mr-2" /> Add Student
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
+          <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+            <DialogHeader className="space-y-1 px-6 pt-6 pb-0 text-left">
               <DialogTitle>Add New Student</DialogTitle>
+              <DialogDescription>
+                Enter the student&apos;s personal details, gender, and academic information.
+              </DialogDescription>
             </DialogHeader>
-            <StudentForm 
-              onSubmit={(data) => {
-                addStudent(data);
-                setIsAddOpen(false);
-              }}
-              onCancel={() => setIsAddOpen(false)}
-            />
+            <div className="px-6">
+              <StudentForm
+                onSubmit={(data) => {
+                  addStudent(data);
+                  setIsAddOpen(false);
+                }}
+                onCancel={() => setIsAddOpen(false)}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -193,6 +368,8 @@ export default function Students() {
             <TableRow>
               <TableHead>Student ID</TableHead>
               <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Gender</TableHead>
               <TableHead>Course</TableHead>
               <TableHead>Assignment</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -204,6 +381,8 @@ export default function Students() {
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
@@ -211,7 +390,7 @@ export default function Students() {
               ))
             ) : filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center">
+                <TableCell colSpan={7} className="h-32 text-center">
                   <EmptyState title="No students found" description="Try adjusting your search or add a new student." />
                 </TableCell>
               </TableRow>
@@ -223,12 +402,26 @@ export default function Students() {
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.studentId}</TableCell>
                     <TableCell>{student.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{student.email}</TableCell>
+                    <TableCell>
+                      {student.gender ? (
+                        <Badge
+                          variant="outline"
+                          className={`border-0 ${getGenderColor(student.gender)}`}
+                        >
+                          {getGenderLabel(student.gender)}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{student.course}</TableCell>
                     <TableCell>
                       <RoomAssignmentCell
                         student={student}
                         rooms={rooms}
-                        assignmentId={assignment?.id}
+                        assignments={assignments}
+                        assignment={assignment}
                         onAssign={(roomId) => assignStudentToRoom(student.id, roomId)}
                         onUnassign={() => {
                           if (assignment) removeAssignment(assignment.id);
@@ -243,18 +436,23 @@ export default function Students() {
                               <Pencil className="w-4 h-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
+                          <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+                            <DialogHeader className="space-y-1 px-6 pt-6 pb-0 text-left">
                               <DialogTitle>Edit Student</DialogTitle>
+                              <DialogDescription>
+                                Update personal details, gender, or academic information.
+                              </DialogDescription>
                             </DialogHeader>
-                            <StudentForm 
-                              student={student}
-                              onSubmit={(data) => {
-                                updateStudent(student.id, data);
-                                setEditingStudent(null);
-                              }}
-                              onCancel={() => setEditingStudent(null)}
-                            />
+                            <div className="px-6">
+                              <StudentForm
+                                student={student}
+                                onSubmit={(data) => {
+                                  updateStudent(student.id, data);
+                                  setEditingStudent(null);
+                                }}
+                                onCancel={() => setEditingStudent(null)}
+                              />
+                            </div>
                           </DialogContent>
                         </Dialog>
 

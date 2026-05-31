@@ -8,6 +8,12 @@ export type Json =
 
 export type RoomStatus = "available" | "full" | "partial";
 export type PaymentStatus = "paid" | "pending" | "overdue";
+export type RoomBedType =
+  | "single_bed"
+  | "two_beds"
+  | "single_double_deck"
+  | "two_double_deck";
+export type RoomCategory = "male" | "female";
 
 export type Database = {
   public: {
@@ -20,6 +26,8 @@ export type Database = {
           course: string;
           department: string;
           contact_number: string;
+          email: string;
+          gender: RoomCategory | null;
           assigned_room_id: number | null;
           created_at: string;
           updated_at: string;
@@ -31,6 +39,8 @@ export type Database = {
           course: string;
           department: string;
           contact_number: string;
+          email: string;
+          gender?: RoomCategory | null;
           assigned_room_id?: number | null;
           created_at?: string;
           updated_at?: string;
@@ -42,6 +52,8 @@ export type Database = {
           course?: string;
           department?: string;
           contact_number?: string;
+          email?: string;
+          gender?: RoomCategory | null;
           assigned_room_id?: number | null;
           created_at?: string;
           updated_at?: string;
@@ -65,6 +77,9 @@ export type Database = {
           current_occupancy: number;
           status: RoomStatus;
           image_url: string | null;
+          bed_type: RoomBedType | null;
+          amenities: Json;
+          category: RoomCategory | null;
           created_at: string;
           updated_at: string;
         };
@@ -76,6 +91,9 @@ export type Database = {
           current_occupancy?: number;
           status?: RoomStatus;
           image_url?: string | null;
+          bed_type?: RoomBedType | null;
+          amenities?: Json;
+          category?: RoomCategory | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -87,6 +105,9 @@ export type Database = {
           current_occupancy?: number;
           status?: RoomStatus;
           image_url?: string | null;
+          bed_type?: RoomBedType | null;
+          amenities?: Json;
+          category?: RoomCategory | null;
           created_at?: string;
           updated_at?: string;
         };

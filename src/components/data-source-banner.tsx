@@ -10,7 +10,7 @@ export function DataSourceBanner() {
 
   const message =
     dataSourceMode === "demo"
-      ? "Demo mode — changes are stored in the browser only and are not saved to Supabase. Add your Supabase environment variables in Vercel (and .env.local for local dev), then redeploy."
+      ? "Demo mode — changes are stored in the browser only and are not saved to Supabase. Add your Supabase environment variables in Vercel (and .env for local dev), then redeploy."
       : "Supabase URL and anon key are set, but SUPABASE_SERVICE_ROLE_KEY is missing or invalid. Writes will not reach your database until you add the service role key from Supabase → Project Settings → API.";
 
   return (

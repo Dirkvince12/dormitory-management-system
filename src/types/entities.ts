@@ -1,3 +1,8 @@
+import type { Gender } from "@/lib/gender";
+import type { RoomAmenities, RoomBedType, RoomCategory } from "@/lib/room-amenities";
+
+export type { Gender, RoomAmenities, RoomBedType, RoomCategory };
+
 export type RoomStatus = "available" | "full" | "partial";
 export type PaymentStatus = "paid" | "pending" | "overdue";
 
@@ -8,6 +13,8 @@ export type Student = {
   course: string;
   department: string;
   contactNumber: string;
+  email: string;
+  gender: Gender | null;
   assignedRoomId: number | null;
 };
 
@@ -19,6 +26,9 @@ export type Room = {
   currentOccupancy: number;
   status: RoomStatus;
   imageUrl: string | null;
+  bedType: RoomBedType | null;
+  amenities: RoomAmenities;
+  category: RoomCategory | null;
 };
 
 export type Assignment = {
